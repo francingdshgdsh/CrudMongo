@@ -11,6 +11,97 @@
     <div class="container">
         <h1 class="text-center mt-5 mb-4">Inventario de productos</h1>
         <div class="row">
+
+<div class="input-group mb-4">
+    <form action="/search" method="GET" class="d-flex w-100">
+        <input type="text" class="form-control" placeholder="Buscar producto" name="query" required style="border: 2px solid #007bff;">
+        <button class="btn btn-primary ms-2" type="submit">Buscar</button>
+    </form>
+</div>
+
+{% if search_results %}
+<div id="searchResultsContainer">
+    <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-3">Resultado de búsqueda</h5>
+        <button class="btn btn-secondary btn-sm mb-3" onclick="document.getElementById('searchResultsContainer').style.display='none';">Ocultar</button>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered border-primary table-hover text-center align-middle">
+            <thead class="">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Categoría</th>
+                    <th>Ubicación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in search_results %}
+                <tr>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.quantity }}</td>
+                    <td>{{ product.price }}</td>
+                    <td>{{ product.category }}</td>
+                    <td>{{ product.location }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+
+            <div class="container">
+                <div class="row">
+                    <form action="/delete_all" method="POST" onsubmit="return confirmDeleteAll(event)">
+                        <button class="btn btn-danger mb-3" type="submit">Eliminar todo</button>
+                    </form> 
+                    <p>
+                    <button class="btn btn-primary mb-3 ms-2" data-bs-toggle="modal" data-bs-target="#editFieldsModal">
+                        Editar campos de documentos
+                    </button>  
+                </p>                                      
+                </div>
+            </div>
+
+            <div class="modal fade" id="editFieldsModal" tabindex="-1" aria-labelledby="editFieldsModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                  <form method="POST" action="/update_field">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="editFieldsModalLabel">Editar campo de documentos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                      </div>
+                      <div class="modal-body">
+                          {% if products %}
+                          <div class="mb-3">
+                              <label>Campo actual</label>
+                              <select name="old_field" class="form-select" required>
+                                  {% for field in products[0].keys() if field != '_id' %}
+                                  <option value="{{ field }}">{{ field }}</option>
+                                  {% endfor %}
+                              </select>
+                          </div>
+                          <div class="mb-3">
+                              <label>Nuevo nombre del campo</label>
+                              <input type="text" class="form-control" name="new_field" required>
+                          </div>
+                          {% else %}
+                          <p>No hay productos en la base de datos.</p>
+                          {% endif %}
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Actualizar campo</button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+                         
+
             <div class="col-md-4 mb-3">
                 <div class="card">
                     <div class="card-header">
@@ -19,15 +110,15 @@
                     <div class="card-body">
                         <form action="/products" method="POST">
                             <label>Nombre</label>
-                            <input type="text" class="form-control mb-2" name="name">
+                            <input type="text" class="form-control mb-2" name="name" required>
                             <label>Precio</label>
-                            <input type="text" class="form-control mb-2" name="price">
+                            <input type="number" class="form-control mb-2" name="price" required>
                             <label>Cantidad</label>
-                            <input type="text" class="form-control mb-2" name="quantity">
+                            <input type="number" class="form-control mb-2" name="quantity" required>
                             <label>Categoría</label>
-                            <input type="text" class="form-control mb-2" name="category">
+                            <input type="text" class="form-control mb-2" name="category" required>
                             <label>Ubicación</label>
-                            <input type="text" class="form-control mb-3" name="location">
+                            <input type="text" class="form-control mb-3" name="location" required>
                             <button class="btn btn-primary w-100" type="submit">Agregar</button>
                         </form>
                     </div>
@@ -107,7 +198,7 @@
                 <input type="text" class="form-control mb-2" name="location" id="editLocation" required>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" id="cancelEdit" data-bs-dismiss="modal">Cancelar</button>
+              <button type="button" class="btn btn-danger" id="cancelEdit" data-bs-dismiss="modal">Cancelar</button>
               <button type="submit" class="btn btn-success">Guardar cambios</button>
             </div>
           </div>
@@ -115,76 +206,95 @@
       </div>
     </div>
 
-    <!-- JS Bootstrap y personalizado -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const editButtons = document.querySelectorAll(".edit-btn");
-        const deleteButtons = document.querySelectorAll(".delete-btn");
-        const form = document.getElementById("editForm");
-
-        let originalName = "";
-
-        editButtons.forEach(button => {
-            button.addEventListener("click", () => {
-                originalName = button.dataset.name;
-                form.action = `/edit/${originalName}`;
-                document.getElementById("editName").value = button.dataset.name;
-                document.getElementById("editQuantity").value = button.dataset.quantity;
-                document.getElementById("editPrice").value = button.dataset.price;
-                document.getElementById("editCategory").value = button.dataset.category;
-                document.getElementById("editLocation").value = button.dataset.location;
+        document.addEventListener("DOMContentLoaded", () => {
+            const editButtons = document.querySelectorAll(".edit-btn");
+            const deleteButtons = document.querySelectorAll(".delete-btn");
+            const form = document.getElementById("editForm");
+    
+            let originalName = "";
+    
+            editButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    originalName = button.dataset.name;
+                    form.action = `/edit/${originalName}`;
+                    document.getElementById("editName").value = button.dataset.name;
+                    document.getElementById("editQuantity").value = button.dataset.quantity;
+                    document.getElementById("editPrice").value = button.dataset.price;
+                    document.getElementById("editCategory").value = button.dataset.category;
+                    document.getElementById("editLocation").value = button.dataset.location;
+                });
             });
-        });
-
-        form.addEventListener("submit", function (e) {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'success',
-                title: '¡Producto actualizado!',
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                form.submit();
-            });
-        });
-
-        document.getElementById("cancelEdit").addEventListener("click", () => {
-            Swal.fire({
-                icon: 'info',
-                title: 'Edición cancelada',
-                showConfirmButton: false,
-                timer: 1500
-            });
-        });
-
-        deleteButtons.forEach(button => {
-            button.addEventListener("click", function (e) {
+    
+            form.addEventListener("submit", function (e) {
                 e.preventDefault();
-                const href = this.getAttribute("href");
-
                 Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: "¡Esta acción no se puede deshacer!",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Producto eliminado',
-                            showConfirmButton: false,
-                            timer: 1500
-                        }).then(() => {
-                            window.location.href = href;
-                        });
-                    }
+                    icon: 'success',
+                    title: '¡Producto actualizado!',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    form.submit();
+                });
+            });
+    
+            document.getElementById("cancelEdit").addEventListener("click", () => {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Edición cancelada',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            });
+    
+            deleteButtons.forEach(button => {
+                button.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    const href = this.getAttribute("href");
+    
+                    Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: "¡Esta acción no se puede deshacer!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Producto eliminado',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                window.location.href = href;
+                            });
+                        }
+                    });
                 });
             });
         });
-    });
+    
+        function confirmDeleteAll(event) {
+        event.preventDefault(); 
+
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "¡Esta acción no se puede deshacer!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar todo',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                event.target.submit();
+            }
+        });
+
+        return true; 
+    }
     </script>
+    
 </body>
 </html>
